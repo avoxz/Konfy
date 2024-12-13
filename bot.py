@@ -83,6 +83,7 @@ def keep_alive():
 
 #help command with professional look and interface ..........
 from discord.ext import commands
+
 @bot.command(name="help")
 async def help(ctx):
     embed = discord.Embed(
@@ -90,6 +91,7 @@ async def help(ctx):
         description="Here are all the available commands. Select a category to see more details.",
         color=discord.Color.blue()
     )
+
     embed.add_field(
         name="Moderation",
         value="`ban`, `unban`, `kick`, `mute`, `unmute`, `purge`, `softban`, `warn`",
@@ -110,20 +112,26 @@ async def help(ctx):
         value="`help`, `ping`, `botinfo`",
         inline=False
     )
-    embed.set_footer(text="Developed with ❤️ by avoxz | Use ;help <command> for more info on a command.")
-# Send the help embed
+
+    embed.set_footer(text="Bot by YourName | Use ;help <command> for more info on a command.")
+
+    # Send the help embed
     message = await ctx.send(embed=embed)
-# Add reactions for categories to simulate dropdown-style navigation
+
+    # Add reactions for categories to simulate dropdown-style navigation
     await message.add_reaction("🔧")  # Moderation
-    await message.add_reaction("⚙️")  # Utilities
+    await message.add_reaction("\u2699\ufe0f")  # Utilities (⚙️ in Unicode)
     await message.add_reaction("🛠️")  # Server Management
     await message.add_reaction("ℹ️")  # Information
-# Define the check for reactions
+
+    # Define the check for reactions
     def check(reaction, user):
-        return user == ctx.author and str(reaction.emoji) in ["🔧", "⚙️", "🛠️", "ℹ️"]
-# Wait for the user to react to the embed
+        return user == ctx.author and str(reaction.emoji) in ["🔧", "\u2699\ufe0f", "🛠️", "ℹ️"]
+
+    # Wait for the user to react to the embed
     reaction, user = await bot.wait_for("reaction_add", check=check)
-# Update the embed based on the category selected
+
+    # Update the embed based on the category selected
     if str(reaction.emoji) == "🔧":
         # Moderation Commands
         mod_embed = discord.Embed(
@@ -140,7 +148,8 @@ async def help(ctx):
         mod_embed.add_field(name="`softban`", value="Temporarily ban a member for a specific time.", inline=False)
         mod_embed.add_field(name="`warn`", value="Warn a member for inappropriate behavior.", inline=False)
         await message.edit(embed=mod_embed)
-elif str(reaction.emoji) == "⚙️":
+
+    elif str(reaction.emoji) == "\u2699\ufe0f":
         # Utilities Commands
         util_embed = discord.Embed(
             title="Utilities Commands",
@@ -154,7 +163,8 @@ elif str(reaction.emoji) == "⚙️":
         util_embed.add_field(name="`userhistory`", value="View the warning history of a member.", inline=False)
         util_embed.add_field(name="`scam-alert`", value="Alert everyone about a scam in the server.", inline=False)
         await message.edit(embed=util_embed)
-elif str(reaction.emoji) == "🛠️":
+
+    elif str(reaction.emoji) == "🛠️":
         # Server Management Commands
         server_embed = discord.Embed(
             title="Server Management Commands",
@@ -166,7 +176,8 @@ elif str(reaction.emoji) == "🛠️":
         server_embed.add_field(name="`prefix`", value="Set or change the bot prefix.", inline=False)
         server_embed.add_field(name="`status`", value="Change the bot's status.", inline=False)
         await message.edit(embed=server_embed)
-elif str(reaction.emoji) == "ℹ️":
+
+    elif str(reaction.emoji) == "ℹ️":
         # Information Commands
         info_embed = discord.Embed(
             title="Information Commands",
@@ -177,8 +188,10 @@ elif str(reaction.emoji) == "ℹ️":
         info_embed.add_field(name="`ping`", value="Check the bot's latency.", inline=False)
         info_embed.add_field(name="`botinfo`", value="Get information about the bot.", inline=False)
         await message.edit(embed=info_embed)
-# Remove the user's reaction to prevent re-triggering
+
+    # Remove the user's reaction to prevent re-triggering
     await message.remove_reaction(reaction, user)
+
 #help
 
 #bot status 
