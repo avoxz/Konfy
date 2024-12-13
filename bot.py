@@ -21,143 +21,387 @@ intents.guilds = True
 intents.members = True  # Required for member join/leave events
 intents.message_content = True  # Enable message content intent
 
-bot = commands.Bot(command_prefix=";", intents=intents)
+bot = commands.Bot(command_prefix=";", intents=intents)  # Prefix is set for non-whitelisted users
+# List of whitelisted user IDs
+whitelisted_users = []
+BOT_OWNER_ID = 1170225052940251196  # Replace with your Discord User ID
+
+#np
+@bot.event
+async def on_ready():
+    print(f"Bot is online as {bot.user.name}")
+# Dynamic Prefix Handling
+@bot.event
+async def on_message(message):
+    if message.author.bot:  # Ignore bot messages
+        return
+    # Check if the user is whitelisted
+    if message.author.id in whitelisted_users:
+        # Try to parse the message as a command without requiring a prefix
+        ctx = await bot.get_context(message)
+        if ctx.valid:
+            await bot.invoke(ctx)
+            return
+    # Process commands for regular users (with the prefix)
+    await bot.process_commands(message)
+# Command to add a user to the whitelist
+@bot.command(name="np")
+async def np(ctx, user: discord.User):
+    if ctx.author.id != BOT_OWNER_ID:
+        await ctx.send("You do not have permission to use this command.")
+        return
+    if user.id not in whitelisted_users:
+        whitelisted_users.append(user.id)
+        await ctx.send(f"{user.mention} has been added to the no-prefix whitelist.")
+    else:
+        await ctx.send(f"{user.mention} is already in the no-prefix whitelist.")
+
+# Command to remove a user from the whitelist
+@bot.command(name="npr")
+async def npr(ctx, user: discord.User):
+    if ctx.author.id != BOT_OWNER_ID:
+        await ctx.send("You do not have permission to use this command.")
+        return
+    if user.id in whitelisted_users:
+        whitelisted_users.remove(user.id)
+        await ctx.send(f"{user.mention} has been removed from the no-prefix whitelist.")
+    else:
+        await ctx.send(f"{user.mention} is not in the no-prefix whitelist.")
+#np
 
 bot.remove_command("help")
-
 # Flask app for keep-alive
 app = Flask('')
-
 @app.route('/')
 def home():
     return "Bot is running!"
-
 def run():
     app.run(host='0.0.0.0', port=8080)
-
 def keep_alive():
     threading.Thread(target=run).start()
+# Flask app for keep-alive
 
 # Bot Status
-@bot.command()
-@commands.has_permissions(administrator=True)
-async def status(ctx, status_type: str, *, name: str = "Sun MC Network"):
-    """
-    Change the bot's status dynamically.
-    Status Types:
-    - active: Displays a standard "Playing" activity.
-    - streaming: Displays a "Streaming" activity with a link.
-    """
-    try:
-        if status_type.lower() == "active":
-            activity = discord.Game(name=name)
-        elif status_type.lower() == "streaming":
-            activity = discord.Streaming(name=name, url="https://www.twitch.tv/sunmc0069")  # Replace with a valid URL
-        else:
-            await ctx.send("Invalid status type! Use `active` or `streaming`.")
-            return
+# Command to change the bot's status dynamically
+@bot.command(name="set_status")
+async def set_status(ctx, status_type: str, *, status_message: str):
+    if ctx.author.id != BOT_OWNER_ID:
+        await ctx.send("You do not have permission to use this command.")
+        return
+    status_type = status_type.lower()
+    activity = None
+    if status_type == "playing":
+        activity = discord.Game(name=status_message)
+    elif status_type == "streaming":
+        # Replace with your desired stream URL if necessary
+        activity = discord.Streaming(name=status_message, url="https://www.twitch.tv/your_channel")
+    elif status_type == "listening":
+        activity = discord.Activity(type=discord.ActivityType.listening, name=status_message)
+    elif status_type == "watching":
+        activity = discord.Activity(type=discord.ActivityType.watching, name=status_message)
+    else:
+        await ctx.send("Invalid status type! Use one of: `playing`, `streaming`, `listening`, `watching`.")
+        return
+    await bot.change_presence(activity=activity)
+    await ctx.send(f"Bot status updated to {status_type.capitalize()} **{status_message}**.")
+# Bot Status
 
-        await bot.change_presence(activity=activity)
-        embed = discord.Embed(
-            title="Bot Status Updated",
-            description=f"Bot status set to **{status_type.capitalize()}** with name: **{name}**",
-            color=0x00ff00
-        )
-        await ctx.send(embed=embed)
-    except Exception as e:
-        await ctx.send(f"An error occurred: {str(e)}")
-
-
-
+# Global Error Handler
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CommandNotFound):
+        await ctx.send(embed=discord.Embed(
+            title="Error: Command Not Found",
+            description=f"The command you entered does not exist. Use `;help` to see available commands.",
+            color=discord.Color.red()
+        ))
+    elif isinstance(error, commands.MissingPermissions):
+        await ctx.send(embed=discord.Embed(
+            title="Error: Missing Permissions",
+            description="You do not have the required permissions to execute this command.",
+            color=discord.Color.red()
+        ))
+    elif isinstance(error, commands.BotMissingPermissions):
+        await ctx.send(embed=discord.Embed(
+            title="Error: Bot Missing Permissions",
+            description="I do not have the required permissions to perform this action.",
+            color=discord.Color.red()
+        ))
+    elif isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send(embed=discord.Embed(
+            title="Error: Missing Argument",
+            description=f"You missed a required argument: `{error.param.name}`. Use `;help <command>` for details.",
+            color=discord.Color.red()
+        ))
+    elif isinstance(error, commands.BadArgument):
+        await ctx.send(embed=discord.Embed(
+            title="Error: Invalid Argument",
+            description="You provided an invalid argument. Please check and try again.",
+            color=discord.Color.red()
+        ))
+    elif isinstance(error, commands.CommandOnCooldown):
+        await ctx.send(embed=discord.Embed(
+            title="Error: Command on Cooldown",
+            description=f"This command is on cooldown. Try again in {error.retry_after:.2f} seconds.",
+            color=discord.Color.orange()
+        ))
+    elif isinstance(error, commands.NotOwner):
+        await ctx.send(embed=discord.Embed(
+            title="Error: Owner Only",
+            description="This command is restricted to the bot owner.",
+            color=discord.Color.red()
+        ))
+    else:
+        await ctx.send(embed=discord.Embed(
+            title="Unexpected Error",
+            description="An unexpected error occurred. Please contact the bot administrator.",
+            color=discord.Color.red()
+        ))
+        print(f"Ignoring exception in command {ctx.command}: {error}")
 # Error Handling
-#@bot.event
-#async def on_command_error(ctx, error):
-#    if isinstance(error, commands.MissingPermissions):
-#        await ctx.send("You don't have the required permissions to use this command.")
-#    elif isinstance(error, commands.MissingRequiredArgument):
-#        await ctx.send("Missing arguments. Please check the command syntax.")
-#    elif isinstance(error, commands.CommandNotFound):
-#        await ctx.send("Command not found. Use `;help` to see available commands.")
-#    else:
-#        await ctx.send("An error occurred.")
-#        logger.error(f"Error in command {ctx.command}: {error}")
-# Error Handling
 
-
-#Ban
-@bot.command()
+#ban
+@bot.command(name="ban")
 @commands.has_permissions(ban_members=True)
-async def ban(ctx, member: discord.Member, *, reason=None):
-    """
-    Ban a member, notify them via DM, and log the punishment.
-    """
+async def ban(ctx, target: discord.Member = None, *, reason="No reason provided"):
+    # Check if target is provided or attempt to fetch them by ID
+    if not target:
+        await ctx.send(embed=discord.Embed(
+            title="Error: Missing Member",
+            description="Please specify a member to ban. You can mention them or provide their User ID.",
+            color=discord.Color.red()
+        ))
+        return
+
     try:
-        # DM the user about the ban
-        dm_embed = discord.Embed(
-            title="You Have Been Banned",
-            description=f"You have been banned from {ctx.guild.name}.",
-            color=0xff0000
+        # Attempt to DM the user about the ban
+        try:
+            dm_embed = discord.Embed(
+                title="You have been banned!",
+                description=f"You have been banned from **{ctx.guild.name}**.\n**Reason:** {reason}\nIf you believe this was a mistake, please contact the server staff.",
+                color=discord.Color.red()
+            )
+            await target.send(embed=dm_embed)
+        except discord.Forbidden:
+            await ctx.send(embed=discord.Embed(
+                title="Notice",
+                description=f"Could not send a DM to {target.name}. They may have DMs disabled.",
+                color=discord.Color.orange()
+            ))
+        # Ban the member
+        await target.ban(reason=f"Banned by {ctx.author.name}: {reason}")
+        # Send confirmation embed in the server
+        embed = discord.Embed(
+            title="Member Banned",
+            description=f"**{target}** has been banned from the server.",
+            color=discord.Color.red()
         )
-        dm_embed.add_field(name="Reason", value=reason if reason else "No reason provided", inline=False)
-        dm_embed.set_footer(text=f"Moderator: {ctx.author.name}")
-        await member.send(embed=dm_embed)
+        embed.add_field(name="Moderator", value=ctx.author.mention, inline=True)
+        embed.add_field(name="Reason", value=reason, inline=True)
+        embed.set_thumbnail(url=target.avatar.url if target.avatar else None)
+        await ctx.send(embed=embed)
+
+    except discord.NotFound:
+        await ctx.send(embed=discord.Embed(
+            title="Error: Member Not Found",
+            description=f"Could not find a member with the ID `{target}`. Please ensure the ID is correct.",
+            color=discord.Color.red()
+        ))
     except discord.Forbidden:
-        await ctx.send(f"Could not DM {member.mention} about the ban.")
-    # Ban the member
-    await member.ban(reason=reason)
-    # Log the punishment
-    user_id = str(member.id)
-    if user_id not in punishments:
-        punishments[user_id] = []
-    punishments[user_id].append({"type": "Ban", "reason": reason, "moderator": ctx.author.name})
-    # Send confirmation in the server
-    embed = discord.Embed(
-        title="Member Banned",
-        description=f"{member.mention} has been banned.",
-        color=0xff0000
-    )
-    embed.add_field(name="Reason", value=reason if reason else "No reason provided", inline=False)
-    embed.set_footer(text=f"Action performed by: {ctx.author.name}")
-    await ctx.send(embed=embed)
-#Ban
+        await ctx.send(embed=discord.Embed(
+            title="Error: Insufficient Permissions",
+            description=f"I do not have permission to ban {target.mention}. Please check my role and permissions.",
+            color=discord.Color.red()
+        ))
+    except Exception as e:
+        await ctx.send(embed=discord.Embed(
+            title="Error: Unexpected Issue",
+            description=f"An unexpected error occurred: {str(e)}",
+            color=discord.Color.red()
+        ))
+# Allow banning by User ID if the member is not in the server
+@bot.command(name="banid")
+@commands.has_permissions(ban_members=True)
+async def banid(ctx, user_id: int, *, reason="No reason provided"):
+    try:
+        user = await bot.fetch_user(user_id)  # Fetch user by ID
+        # Attempt to DM the user about the ban
+        try:
+            dm_embed = discord.Embed(
+                title="You have been banned!",
+                description=f"You have been banned from **{ctx.guild.name}**.\n**Reason:** {reason}\nIf you believe this was a mistake, please contact the server staff.",
+                color=discord.Color.red()
+            )
+            await user.send(embed=dm_embed)
+        except discord.Forbidden:
+            await ctx.send(embed=discord.Embed(
+                title="Notice",
+                description=f"Could not send a DM to {user.name}. They may have DMs disabled.",
+                color=discord.Color.orange()
+            ))
+        # Ban the user by ID
+        await ctx.guild.ban(discord.Object(id=user_id), reason=f"Banned by {ctx.author.name}: {reason}")
+        # Send confirmation embed in the server
+        embed = discord.Embed(
+            title="User Banned by ID",
+            description=f"**{user}** has been banned from the server.",
+            color=discord.Color.red()
+        )
+        embed.add_field(name="Moderator", value=ctx.author.mention, inline=True)
+        embed.add_field(name="Reason", value=reason, inline=True)
+        embed.set_thumbnail(url=user.avatar.url if user.avatar else None)
+        await ctx.send(embed=embed)
+
+    except discord.NotFound:
+        await ctx.send(embed=discord.Embed(
+            title="Error: User Not Found",
+            description=f"Could not find a user with the ID `{user_id}`. Please ensure the ID is correct.",
+            color=discord.Color.red()
+        ))
+    except discord.Forbidden:
+        await ctx.send(embed=discord.Embed(
+            title="Error: Insufficient Permissions",
+            description=f"I do not have permission to ban this user. Please check my role and permissions.",
+            color=discord.Color.red()
+        ))
+    except Exception as e:
+        await ctx.send(embed=discord.Embed(
+            title="Error: Unexpected Issue",
+            description=f"An unexpected error occurred: {str(e)}",
+            color=discord.Color.red()
+        ))
+# ban
 
 #unban
-@bot.command()
+@bot.command(name="unban")
 @commands.has_permissions(ban_members=True)
-async def unban(ctx, *, member):
-    banned_users = await ctx.guild.bans()
-    member_name, member_discriminator = member.split('#')
-    for ban_entry in banned_users:
-        user = ban_entry.user
-        if (user.name, user.discriminator) == (member_name, member_discriminator):
-            await ctx.guild.unban(user)
-            embed = discord.Embed(title="Member Unbanned", description=f"{user.name}#{user.discriminator} has been unbanned.", color=0x00ff00)
-            await ctx.send(embed=embed)
-            return
-    await ctx.send("User not found.")
+async def unban(ctx, user_id: int, *, reason="No reason provided"):
+    try:
+        # Fetch the user by ID
+        user = await bot.fetch_user(user_id)
+        # Attempt to unban the user
+        await ctx.guild.unban(user, reason=f"Unbanned by {ctx.author.name}: {reason}")
+        # DM the user about the unban
+        try:
+            dm_embed = discord.Embed(
+                title="You have been unbanned!",
+                description=f"You have been unbanned from **{ctx.guild.name}**.\n**Reason:** {reason}\nYou're welcome to join the server again.",
+                color=discord.Color.green()
+            )
+            await user.send(embed=dm_embed)
+        except discord.Forbidden:
+            await ctx.send(embed=discord.Embed(
+                title="Notice",
+                description=f"Could not send a DM to {user.name}. They may have DMs disabled.",
+                color=discord.Color.orange()
+            ))
+        # Send confirmation embed in the server
+        embed = discord.Embed(
+            title="User Unbanned",
+            description=f"**{user}** has been unbanned from the server.",
+            color=discord.Color.green()
+        )
+        embed.add_field(name="Moderator", value=ctx.author.mention, inline=True)
+        embed.add_field(name="Reason", value=reason, inline=True)
+        embed.set_thumbnail(url=user.avatar.url if user.avatar else None)
+        await ctx.send(embed=embed)
+    except discord.NotFound:
+        await ctx.send(embed=discord.Embed(
+            title="Error: User Not Found",
+            description=f"Could not find a user with the ID `{user_id}` in the ban list. Please ensure the ID is correct.",
+            color=discord.Color.red()
+        ))
+    except discord.Forbidden:
+        await ctx.send(embed=discord.Embed(
+            title="Error: Insufficient Permissions",
+            description=f"I do not have permission to unban this user. Please check my role and permissions.",
+            color=discord.Color.red()
+        ))
+    except Exception as e:
+        await ctx.send(embed=discord.Embed(
+            title="Error: Unexpected Issue",
+            description=f"An unexpected error occurred: {str(e)}",
+            color=discord.Color.red()
+        ))
 #unban
 
 #softban
-@bot.command()
+@bot.command(name="softban")
 @commands.has_permissions(ban_members=True)
-async def softban(ctx, member: discord.Member, *, reason=None):
+async def softban(ctx, user: discord.Member | int, duration: str, *, reason="No reason provided"):
     try:
-        # Ban the member and delete their message history
-        await member.ban(reason=reason, delete_message_days=7)
-        # Immediately unban the member
-        await ctx.guild.unban(member, reason="Softban: Immediate unban after ban")
-        
-        # Send confirmation embed
+        # Parse the duration
+        time_units = {"m": 60, "h": 3600, "d": 86400, "w": 604800}
+        time_multiplier = time_units.get(duration[-1].lower())
+        if not time_multiplier:
+            await ctx.send(embed=discord.Embed(
+                title="Invalid Duration",
+                description="Duration must end with `m` (minutes), `h` (hours), `d` (days), or `w` (weeks). Example: `10m`, `2h`, `1d`.",
+                color=discord.Color.red()
+            ))
+            return
+        time_in_seconds = int(duration[:-1]) * time_multiplier
+        # Handle both Member and ID cases
+        if isinstance(user, int):  # User is provided as an ID
+            user = await bot.fetch_user(user)
+            is_member = False
+        else:
+            is_member = True
+        # Ban the user
+        await ctx.guild.ban(user, reason=f"Softbanned by {ctx.author.name}: {reason}")
+        # DM the user about the softban
+        try:
+            dm_embed = discord.Embed(
+                title="You have been softbanned!",
+                description=f"You have been temporarily banned from **{ctx.guild.name}** for **{duration}**.\n**Reason:** {reason}",
+                color=discord.Color.red()
+            )
+            await user.send(embed=dm_embed)
+        except discord.Forbidden:
+            await ctx.send(embed=discord.Embed(
+                title="Notice",
+                description=f"Could not send a DM to {user}. They may have DMs disabled.",
+                color=discord.Color.orange()
+            ))
+        # Send confirmation embed in the server
         embed = discord.Embed(
-            title="Member Softbanned",
-            description=f"{member.mention} was softbanned.\nReason: {reason if reason else 'No reason provided'}",
-            color=0xffa500
+            title="User Softbanned",
+            description=f"**{user}** has been temporarily banned from the server for **{duration}**.",
+            color=discord.Color.red()
         )
+        embed.add_field(name="Moderator", value=ctx.author.mention, inline=True)
+        embed.add_field(name="Reason", value=reason, inline=True)
+        if is_member and user.avatar:
+            embed.set_thumbnail(url=user.avatar.url)
         await ctx.send(embed=embed)
+        # Wait for the duration and unban the user
+        await asyncio.sleep(time_in_seconds)
+        await ctx.guild.unban(user, reason="Softban duration expired")
+        # Notify the server about the unban
+        unban_embed = discord.Embed(
+            title="User Unbanned",
+            description=f"**{user}** has been unbanned after the softban duration.",
+            color=discord.Color.green()
+        )
+        await ctx.send(embed=unban_embed)
+    except discord.NotFound:
+        await ctx.send(embed=discord.Embed(
+            title="Error: User Not Found",
+            description=f"Could not find a user with the provided ID or Member: `{user}`.",
+            color=discord.Color.red()
+        ))
     except discord.Forbidden:
-        await ctx.send("I do not have permission to softban this member.")
-    except discord.HTTPException as e:
-        await ctx.send(f"An error occurred while trying to softban the member: {e}")
+        await ctx.send(embed=discord.Embed(
+            title="Error: Insufficient Permissions",
+            description="I do not have permission to softban this user. Please check my role and permissions.",
+            color=discord.Color.red()
+        ))
+    except Exception as e:
+        await ctx.send(embed=discord.Embed(
+            title="Error: Unexpected Issue",
+            description=f"An unexpected error occurred: {str(e)}",
+            color=discord.Color.red()
+        ))
 #softban
 
 #kick
