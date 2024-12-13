@@ -82,11 +82,6 @@ def keep_alive():
 # Flask app for keep-alive
 
 #help command with professional look and interface ..........
-from discord.ext import commands
-import discord
-
-bot = commands.Bot(command_prefix=";", intents=discord.Intents.default())
-
 @bot.command(name="help")
 async def help(ctx):
     embed = discord.Embed(
