@@ -81,7 +81,107 @@ def keep_alive():
     threading.Thread(target=run).start()
 # Flask app for keep-alive
 
-# Bot Status
+#help command with professional look and interface ..........
+from discord.ext import commands
+@bot.command(name="help")
+async def help(ctx):
+    embed = discord.Embed(
+        title="Help - Command List",
+        description="Here are all the available commands. Select a category to see more details.",
+        color=discord.Color.blue()
+    )
+    embed.add_field(
+        name="Moderation",
+        value="`ban`, `unban`, `kick`, `mute`, `unmute`, `purge`, `softban`, `warn`",
+        inline=False
+    )
+    embed.add_field(
+        name="Utilities",
+        value="`role`, `slowmode`, `lock`, `unlock`, `userhistory`, `scam-alert`",
+        inline=False
+    )
+    embed.add_field(
+        name="Server Management",
+        value="`nuke`, `whitelist`, `prefix`, `status`",
+        inline=False
+    )
+    embed.add_field(
+        name="Information",
+        value="`help`, `ping`, `botinfo`",
+        inline=False
+    )
+    embed.set_footer(text="Developed with ❤️ by avoxz | Use ;help <command> for more info on a command.")
+# Send the help embed
+    message = await ctx.send(embed=embed)
+# Add reactions for categories to simulate dropdown-style navigation
+    await message.add_reaction("🔧")  # Moderation
+    await message.add_reaction("⚙️")  # Utilities
+    await message.add_reaction("🛠️")  # Server Management
+    await message.add_reaction("ℹ️")  # Information
+# Define the check for reactions
+    def check(reaction, user):
+        return user == ctx.author and str(reaction.emoji) in ["🔧", "⚙️", "🛠️", "ℹ️"]
+# Wait for the user to react to the embed
+    reaction, user = await bot.wait_for("reaction_add", check=check)
+# Update the embed based on the category selected
+    if str(reaction.emoji) == "🔧":
+        # Moderation Commands
+        mod_embed = discord.Embed(
+            title="Moderation Commands",
+            description="Here are all the moderation commands available:",
+            color=discord.Color.red()
+        )
+        mod_embed.add_field(name="`ban`", value="Ban a member from the server.", inline=False)
+        mod_embed.add_field(name="`unban`", value="Unban a member using their ID.", inline=False)
+        mod_embed.add_field(name="`kick`", value="Kick a member from the server.", inline=False)
+        mod_embed.add_field(name="`mute`", value="Mute a member temporarily.", inline=False)
+        mod_embed.add_field(name="`unmute`", value="Unmute a member.", inline=False)
+        mod_embed.add_field(name="`purge`", value="Purge a certain number of messages.", inline=False)
+        mod_embed.add_field(name="`softban`", value="Temporarily ban a member for a specific time.", inline=False)
+        mod_embed.add_field(name="`warn`", value="Warn a member for inappropriate behavior.", inline=False)
+        await message.edit(embed=mod_embed)
+elif str(reaction.emoji) == "⚙️":
+        # Utilities Commands
+        util_embed = discord.Embed(
+            title="Utilities Commands",
+            description="Here are all the utility commands available:",
+            color=discord.Color.green()
+        )
+        util_embed.add_field(name="`role`", value="Assign or remove roles from a member.", inline=False)
+        util_embed.add_field(name="`slowmode`", value="Set slowmode for a channel.", inline=False)
+        util_embed.add_field(name="`lock`", value="Lock a channel so only admins can send messages.", inline=False)
+        util_embed.add_field(name="`unlock`", value="Unlock a channel to allow members to send messages.", inline=False)
+        util_embed.add_field(name="`userhistory`", value="View the warning history of a member.", inline=False)
+        util_embed.add_field(name="`scam-alert`", value="Alert everyone about a scam in the server.", inline=False)
+        await message.edit(embed=util_embed)
+elif str(reaction.emoji) == "🛠️":
+        # Server Management Commands
+        server_embed = discord.Embed(
+            title="Server Management Commands",
+            description="Here are all the server management commands available:",
+            color=discord.Color.purple()
+        )
+        server_embed.add_field(name="`nuke`", value="Delete all channels, roles, and everything in the server.", inline=False)
+        server_embed.add_field(name="`whitelist`", value="Add or remove users from the whitelist.", inline=False)
+        server_embed.add_field(name="`prefix`", value="Set or change the bot prefix.", inline=False)
+        server_embed.add_field(name="`status`", value="Change the bot's status.", inline=False)
+        await message.edit(embed=server_embed)
+elif str(reaction.emoji) == "ℹ️":
+        # Information Commands
+        info_embed = discord.Embed(
+            title="Information Commands",
+            description="Here are the information commands available:",
+            color=discord.Color.blue()
+        )
+        info_embed.add_field(name="`help`", value="Show this help menu.", inline=False)
+        info_embed.add_field(name="`ping`", value="Check the bot's latency.", inline=False)
+        info_embed.add_field(name="`botinfo`", value="Get information about the bot.", inline=False)
+        await message.edit(embed=info_embed)
+# Remove the user's reaction to prevent re-triggering
+    await message.remove_reaction(reaction, user)
+#help
+
+#bot status 
 # Command to change the bot's status dynamically
 @bot.command(name="set_status")
 async def set_status(ctx, status_type: str, *, status_message: str):
@@ -750,14 +850,6 @@ async def slowmode(ctx, delay: int = 0):
     embed.set_footer(text=f"Set by: {ctx.author.name}")
     await ctx.send(embed=embed)
 #slowmode
-
-# Help Command
-@bot.command()
-async def help(ctx):
-    embed = discord.Embed(title="Bot Commands", description="Here are the available commands:", color=0x00ff00)
-    embed.add_field(name="Moderation", value="`ban`, `unban`, `softban`, `kick`, `mute`, `unmute`, `purge`, `role`, `userhistory`, `warn`, `lock`, `unlock`, `slowmode`", inline=False)
-    embed.set_footer(text="Developed with ❤️ By The avoxz")
-    await ctx.send(embed=embed)
 
 # Run the bot
 keep_alive()
