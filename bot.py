@@ -21,53 +21,49 @@ intents.guilds = True
 intents.members = True  # Required for member join/leave events
 intents.message_content = True  # Enable message content intent
 
-bot = commands.Bot(command_prefix=";", intents=intents)  # Prefix is set for non-whitelisted users
-# List of whitelisted user IDs
-whitelisted_users = []
-BOT_OWNER_ID = 1170225052940251196  # Replace with your Discord User ID
 
-#np
-@bot.event
-async def on_ready():
-    print(f"Bot is online as {bot.user.name}")
-# Dynamic Prefix Handling
-@bot.event
-async def on_message(message):
-    if message.author.bot:  # Ignore bot messages
-        return
-    # Check if the user is whitelisted
-    if message.author.id in whitelisted_users:
-        # Try to parse the message as a command without requiring a prefix
-        ctx = await bot.get_context(message)
-        if ctx.valid:
-            await bot.invoke(ctx)
-            return
-    # Process commands for regular users (with the prefix)
-    await bot.process_commands(message)
-# Command to add a user to the whitelist
+# Default prefix list
+prefixes = [";", ""]
+# Dynamic prefix function
+def get_prefix(bot, message):
+    if message.author.id in no_prefix_users:
+        return prefixes
+    return [";"]
+
+# Create the bot instance
+bot = commands.Bot(command_prefix=get_prefix, intents=discord.Intents.all())
+
+# Store users allowed to use commands without a prefix
+no_prefix_users = []
+
+# Command to switch a user to use commands without a prefix
 @bot.command(name="np")
-async def np(ctx, user: discord.User):
-    if ctx.author.id != BOT_OWNER_ID:
+async def allow_no_prefix(ctx, user_id: int):
+    # Only allow specific user (replace YOUR_BOT_OWNER_ID with your ID)
+    if ctx.author.id != YOUR_BOT_OWNER_ID:
         await ctx.send("You do not have permission to use this command.")
         return
-    if user.id not in whitelisted_users:
-        whitelisted_users.append(user.id)
-        await ctx.send(f"{user.mention} has been added to the no-prefix whitelist.")
-    else:
-        await ctx.send(f"{user.mention} is already in the no-prefix whitelist.")
 
-# Command to remove a user from the whitelist
-@bot.command(name="npr")
-async def npr(ctx, user: discord.User):
-    if ctx.author.id != BOT_OWNER_ID:
-        await ctx.send("You do not have permission to use this command.")
-        return
-    if user.id in whitelisted_users:
-        whitelisted_users.remove(user.id)
-        await ctx.send(f"{user.mention} has been removed from the no-prefix whitelist.")
+    # Add the user to the no prefix list or remove them
+    if user_id not in no_prefix_users:
+        no_prefix_users.append(user_id)
+        await ctx.send(f"User with ID {user_id} can now use commands without a prefix.")
     else:
-        await ctx.send(f"{user.mention} is not in the no-prefix whitelist.")
-#np
+        no_prefix_users.remove(user_id)
+        await ctx.send(f"User with ID {user_id} can no longer use commands without a prefix.")
+
+# Error handler for when commands fail
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("Missing arguments for the command.")
+    elif isinstance(error, commands.CommandNotFound):
+        await ctx.send("This command does not exist.")
+    elif isinstance(error, commands.MissingPermissions):
+        await ctx.send("You do not have the required permissions to run this command.")
+    else:
+        await ctx.send("An unexpected error occurred.")
+        raise error  # Debugging
 
 bot.remove_command("help")
 # Flask app for keep-alive
