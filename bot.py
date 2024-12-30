@@ -7,19 +7,17 @@ import asyncio
 from dotenv import load_dotenv
 import logging
 
-#
-#app = Flask(__name__)
+app = Flask(__name__)
 
-#@app.route('/')
-#def home():
-   # return "Bot is running!"
+@app.route('/')
+def home():
+    return "Bot is running!"
 
-#def run():
-    #app.run(host="0.0.0.0", port=8080)
+def run():
+    app.run(host="0.0.0.0", port=8080)
 
-#def keep_alive():
-   # threading.Thread(target=run).start()
-#
+def keep_alive():
+    threading.Thread(target=run).start()
 
 # Load the token from the .env file
 load_dotenv()
