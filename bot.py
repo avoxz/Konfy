@@ -7,6 +7,10 @@ import asyncio
 from dotenv import load_dotenv
 import logging
 
+# Load the token from the .env file
+load_dotenv()
+TOKEN = os.getenv("DISCORD_TOKEN")
+
 app = Flask(__name__)
 
 @app.route('/')
@@ -14,14 +18,8 @@ def home():
     return "Bot is running!"
 
 def run():
-    app.run(host="0.0.0.0", port=8080)
-
-def keep_alive():
-    threading.Thread(target=run).start()
-
-# Load the token from the .env file
-load_dotenv()
-TOKEN = os.getenv("DISCORD_TOKEN")
+    port = int(os.environ.get("PORT", 8080))  # Use Render's assigned PORT
+    app.run(host='0.0.0.0', port=port)
 
 # Logging setup
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
@@ -32,7 +30,6 @@ intents.messages = True
 intents.guilds = True
 intents.members = True  # Required for member join/leave events
 intents.message_content = True  # Enable message content intent
-
 
 # Default prefix list
 prefixes = [";", ""]
@@ -870,6 +867,8 @@ async def slowmode(ctx, delay: int = 0):
     await ctx.send(embed=embed)
 #slowmode
 
+#threading
+threading.Thread(target=run).start()
 # Run the bot
 keep_alive()
 bot.run(os.getenv("DISCORD_TOKEN"))
