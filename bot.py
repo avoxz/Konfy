@@ -872,4 +872,4 @@ async def slowmode(ctx, delay: int = 0):
 
 # Run the bot
 keep_alive()
-bot.run(TOKEN)
+bot.run(os.getenv("DISCORD_TOKEN"))
